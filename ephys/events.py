@@ -172,12 +172,15 @@ def get_consequence(trial_row,digmarks,fs,window=2.0):
     rec,samps = trial_row['recording'], trial_row['time_samples']
     rt = trial_row['response_time']
     bds = rt, rt+fs*window
-    resp_mask = (
-        (digmarks['recording']==rec)
-        & (digmarks['time_samples']>bds[0])
-        & (digmarks['time_samples']<bds[1])
-        & digmarks['codes'].str.contains('[FfTt]')
-        )
+    try:
+        resp_mask = (
+            (digmarks['recording']==rec)
+            & (digmarks['time_samples']>bds[0])
+            & (digmarks['time_samples']<bds[1])
+            & digmarks['codes'].str.contains('[FfTt]')
+            )
+    except ValueError:
+        return dict(codes=np.nan,time_samples=np.nan,recording=np.nan)
     if digmarks[resp_mask].shape[0]>0:
         return digmarks[resp_mask].iloc[0]
     else:
@@ -224,6 +227,8 @@ def load_trials(block_path):
 
     '''
     digmarks = load_events(block_path,'DigMark')
+    stimulus = load_events(block_path,'Stimulus')
+
     digmarks = digmarks[digmarks['codes']!='C']
     stimulus = load_events(block_path,'Stimulus')
     stim_mask = (
