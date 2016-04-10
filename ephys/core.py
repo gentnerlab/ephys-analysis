@@ -6,6 +6,9 @@ import h5py as h5
 import pandas as pd
 from functools import wraps
 
+try: import simplejson as json
+except ImportError: import json
+
 def file_finder(find_file_func):
     '''
     Decorator to help find files.
@@ -264,3 +267,8 @@ def load_spikes(block_path,channel_group=0,clustering='main'):
                  )
             )
     return spikes
+
+def load_info(block_path):
+    with open(find_info(block_path)) as f:
+        info = json.load(f)
+    return info
