@@ -6,6 +6,9 @@ import h5py as h5
 import pandas as pd
 from functools import wraps
 
+try: import simplejson as json
+except ImportError: import json
+
 def file_finder(find_file_func):
     '''
     Decorator to help find files.
@@ -264,3 +267,29 @@ def load_spikes(block_path,channel_group=0,clustering='main'):
                  )
             )
     return spikes
+
+def load_info(block_path):
+    with open(find_info(block_path)) as f:
+        info = json.load(f)
+    return info
+
+def get_electrode_info(block_path):
+    info = load_info(block_path)
+    return dict(
+        pen_anterior = info['exports'][0]['pen']['anterior'],
+        pen_hemisphere = info['exports'][0]['pen']['hemisphere'],
+        pen_lateral = info['exports'][0]['pen']['lateral'],
+        site_depth = info['exports'][0]['site']['depth'],
+        )
+
+def get_electrode_anterior(block_path):
+    return get_electrode_info(block_path)['pen_anterior']
+
+def get_electrode_lateral(block_path):
+    return get_electrode_info(block_path)['pen_lateral']
+
+def get_electrode_hemisphere(block_path):
+    return get_electrode_info(block_path)['pen_hemisphere']
+    
+def get_electrode_depth(block_path):
+    return get_electrode_info(block_path)['site_depth']
