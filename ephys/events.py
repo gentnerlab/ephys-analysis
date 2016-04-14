@@ -196,14 +196,15 @@ def is_correct(consequence):
 
 def calc_rec_datetime(file_origin,start_time):
     '''
-    calculates the datetime of recording from the probe-the-broab mat export filename
+    calculates the datetime of recording from the probe-the-broab mat export 
+    filename and the timestamp of where in the file the recording started
 
     Parameters
     -----
     file_origin : str
         the mat file (e.g. `SubB997Pen01Site04Epc02File01_10-25-15+12-46-08_B997_block.mat`)
     start_time : float
-        the start time of the recording (e.g. 4.8e-05)
+        the start time of the recording in seconds (e.g. 4.8e-05)
 
     Returns
     -----
