@@ -4,8 +4,6 @@ from scipy.stats import norm
 from sklearn.decomposition import PCA
 from sklearn.mixture import GMM
 
-
-
 def censored(tau_c,M,T):
     '''
      UltraMegaSort2000 by Hill DN, Mehta SB, & Kleinfeld D  - 07/12/2010
@@ -34,8 +32,6 @@ def censored(tau_c,M,T):
      Output:
            c    - estimated false negative fraction from censoring
     '''
-
-
     return (tau_c/1000.0) * M / T
 
 
@@ -79,8 +75,6 @@ def gaussian_overlap(w1, w2):
     C(2,1) - False negative fraction in cluster 2 
     C(2,2) - False positive fraction in cluster 2
     '''
-
-
     # reduce dimensionality to 98% of top Principal Components
     N1 = w1.shape[0]
     N2 = w2.shape[0]
