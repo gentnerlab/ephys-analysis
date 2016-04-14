@@ -1,5 +1,7 @@
+import re
+import datetime as dt
 import numpy as np
-from core import load_events, load_fs
+from core import load_events, load_fs, load_info
     
 class FindEnd():
     def __init__(self):
@@ -192,6 +194,41 @@ def is_correct(consequence):
     except TypeError:
         return consequence
 
+def calc_rec_datetime(file_origin,start_time):
+    '''
+    calculates the datetime of recording from the probe-the-broab mat export 
+    filename and the timestamp of where in the file the recording started
+
+    Parameters
+    -----
+    file_origin : str
+        the mat file (e.g. `SubB997Pen01Site04Epc02File01_10-25-15+12-46-08_B997_block.mat`)
+    start_time : float
+        the start time of the recording in seconds (e.g. 4.8e-05)
+
+    Returns
+    -----
+    rec_datetime : datetime
+        the datetime of the recording
+
+    '''
+    datetime_str = re.search('_([0-9\-\+]+)_',file_origin).groups()[0]
+    datetime = dt.datetime.strptime(datetime_str,'%m-%d-%y+%H-%M-%S')
+    return datetime + dt.timedelta(seconds=start_time)
+
+class FindCorrectionTrials():
+    def __init__(self):
+        self.correction = False
+    def check(self,row):
+        if self.correction:
+            if row['correct']==True:
+                self.correction=False
+            return True
+        else:
+            if row['correct']==False:
+                self.correction = True
+            return False
+
 def load_trials(block_path):
     '''
     returns a pandas dataframe containing trial information for a given block_path
@@ -233,6 +270,7 @@ def load_trials(block_path):
     stimulus = stimulus[stim_mask]
 
     fs = load_fs(block_path)
+    info = load_info(block_path)
     
     stim_end_mask = digmarks['codes'].isin(('>','#'))
     trials = digmarks[stim_end_mask].apply(lambda row: get_stim_start(row,digmarks),axis=1)[:]
@@ -245,4 +283,11 @@ def load_trials(block_path):
     trials['response_time'] = trials.apply(lambda row: get_response(row,digmarks,fs)['time_samples'],axis=1)
     trials['consequence'] = trials.apply(lambda row: get_consequence(row,digmarks,fs)['codes'],axis=1)
     trials['correct'] = trials['consequence'].apply(is_correct)
+    def trial_time(row):
+        file_origin = info['recordings'][row['recording']]['file_origin']
+        start_time = info['recordings'][row['recording']]['start_time']
+        return calc_rec_datetime(file_origin,start_time) + dt.timedelta(seconds=row['time_samples']/fs)
+    trials['datetime'] = trials.apply(trial_time,axis=1)
+    trials.sort_values('datetime',inplace=True)
+    trials['correction'] = trials.apply(FindCorrectionTrials().check,axis=1)
     return trials
