@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.stats import norm
-
 from sklearn.decomposition import PCA
 from sklearn.mixture import GMM
 
