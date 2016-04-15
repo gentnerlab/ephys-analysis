@@ -269,28 +269,52 @@ def load_spikes(block_path,channel_group=0,clustering='main'):
     return spikes
 
 def load_info(block_path):
+    '''
+    loads the json with metadata for the block
+
+    Parameters
+    ------
+    block_path : str
+        path to the block
+
+    Returns
+    -------
+    info : dict
+        dictionary with metadata
+    '''
     with open(find_info(block_path)) as f:
         info = json.load(f)
     return info
 
     
-def get_electrode_info(block_path):
+def load_site_coordinates(block_path,export=0):
+    '''
+    loads the coordinates of the recording site
+
+    Parameters
+    ------
+    block_path : str
+        path to the block
+    export : int
+        which exported file
+
+    Returns
+    -------
+    pen_hemisphere
+        hemisphere of the penetration
+    pen_anterior_um
+        distance toward anterior from Y sinus reference
+    pen_lateral_um
+        distance off midline
+    site_depth_um
+        depth of the electrode array
+
+    '''
     info = load_info(block_path)
-    return dict(
-        pen_anterior = info['exports'][0]['pen']['anterior'],
-        pen_hemisphere = info['exports'][0]['pen']['hemisphere'],
-        pen_lateral = info['exports'][0]['pen']['lateral'],
-        site_depth = info['exports'][0]['site']['depth'],
-        )
-
-def get_electrode_anterior(block_path):
-    return get_electrode_info(block_path)['pen_anterior']
-
-def get_electrode_lateral(block_path):
-    return get_electrode_info(block_path)['pen_lateral']
-
-def get_electrode_hemisphere(block_path):
-    return get_electrode_info(block_path)['pen_hemisphere']
     
-def get_electrode_depth(block_path):
-    return get_electrode_info(block_path)['site_depth']
+    return (
+        info['exports'][export]['pen']['hemisphere'],
+        info['exports'][export]['pen']['anterior'],
+        info['exports'][export]['pen']['lateral'],
+        info['exports'][export]['site']['depth'],
+    )
