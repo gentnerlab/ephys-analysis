@@ -4,6 +4,7 @@ import imp
 import numpy as np
 import h5py as h5
 import pandas as pd
+import copy
 from functools import wraps
 
 def file_finder(find_file_func):
@@ -23,9 +24,9 @@ def file_finder(find_file_func):
     '''
     @wraps(find_file_func)
     def decorated(*args,**kwargs):
-        ls = glob.glob(find_file_func(*args,**kwargs))
-        assert len(ls)==1, ls
-        return ls[0]
+        found_files = glob.glob(find_file_func(*args,**kwargs))
+        assert len(found_files) == 1, found_files
+        return found_files[0]
     return decorated
 
 @file_finder
@@ -108,6 +109,12 @@ def get_info(block_path):
     kwd : full path name to _info.json file
     '''
     return os.path.join(block_path,'*_info.json')
+
+
+def load_phy_params(block_path):
+    par_path = os.path.join(block_path, 'params.prm')
+    par = imp.load_source('', par_path)
+    return {'spikedetekt': copy.deepcopy(par.spikedetekt), 'traces': copy.deepcopy(par.traces)}
 
 def load_probe(block_path):
     '''
@@ -264,3 +271,71 @@ def load_spikes(block_path,channel_group=0,clustering='main'):
                  )
             )
     return spikes
+
+
+def load_waveforms(block_path, cluster, channel_group=0, clustering='main'):
+    """
+    Returns a numpy recarray with the waveforms corresponding to each spike of a cluster
+
+    Parameters
+    ------
+    block_path : str
+        path to the block
+    cluster : int
+        cluster ID
+    channel_group : int, optional
+        shank ID
+    clustering : int, optional
+        ID of clustering
+
+    Returns
+    ------
+    all_waveforms : numpy record array
+        array of n_spikes x records with fields:
+        t_stamp : time stamp (samples) of the spike
+        recording : recording ID of the spike
+        cluster : cluster ID of the spike
+        wave : numpy array with the waveform (n_samples x n_channels)
+
+    """
+
+    raw_path = find_kwd(block_path)
+    sorting_par = load_phy_params(block_path)
+    raw_file = h5.File(raw_path, 'r')
+
+    # parameters
+    wave_pre = sorting_par['spikedetekt']['extract_s_before']
+    wave_post = sorting_par['spikedetekt']['extract_s_after']
+    wave_samples = wave_pre + wave_post
+    wave_chans = raw_file['recordings/0/data'].shape[1]
+    wave_dim = (wave_samples, wave_chans)
+
+    # get the rec and timestamps of the spikes
+    spikes = load_spikes(block_path, channel_group=channel_group, clustering=clustering)
+    this_clu_spikes = spikes[spikes.cluster == cluster].sort_values(by=['recording', 'time_samples'])
+    this_clu_recordings = pd.unique(this_clu_spikes.recording)
+
+    # prototype the spike datatype
+    clu_dtype = this_clu_spikes.dtypes.cluster
+    t_dtype = this_clu_spikes.dtypes.time_samples
+    rec_dtype = this_clu_spikes.dtypes.recording
+    wave_dtype = raw_file['recordings/0/data'].dtype
+    n_spikes = this_clu_spikes.shape[0]
+
+    spike_dtype = np.dtype([('t_stamp', t_dtype, 1), ('recording', rec_dtype, 1),
+                            ('cluster', clu_dtype, 1), ('wave', wave_dtype, wave_dim)])
+    all_waveforms = np.recarray(n_spikes, dtype=spike_dtype)
+
+    # Fill in the waveforms recarray
+    all_waveforms['t_stamp'] = this_clu_spikes.time_samples.as_matrix()
+    all_waveforms['recording'] = this_clu_spikes.recording.as_matrix()
+    all_waveforms['cluster'] = cluster
+    # get all the waveforms for all recordings
+    for i_rec, rec in enumerate(this_clu_recordings):
+        raw_dataset = raw_file['recordings/{}/data'.format(rec)]
+        s_stamps = this_clu_spikes[this_clu_spikes.recording == rec].time_samples.as_matrix()
+        for i_spike, t_spike in enumerate(s_stamps):
+            raw_dataset.read_direct(all_waveforms[i_spike + i_rec]['wave'],
+                                    np.s_[np.int(t_spike - wave_pre): np.int(t_spike + wave_post), :])
+
+    return all_waveforms
