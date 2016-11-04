@@ -53,9 +53,11 @@ def do_raster(raster_data, times, ticks, ax=None, spike_linewidth=1.5,
 
 
 def plot_raster_cell_stim(spikes, trials, clusterID, 
-                          stim, period, rec, fs, plot_params=None, ax=None):
+                          stim, period, fs, **kwargs):
     '''
     Plots a spike raster for a single cell and stimulus 
+    Finds all the recordings and trials of a single stimulus 
+    No need to specify specific recordings
 
     Parameters
     ------
@@ -70,8 +72,6 @@ def plot_raster_cell_stim(spikes, trials, clusterID,
     period : list of floats 
         Time window for the raster:  
         [Seconds_pre_stimulus_onset, Seconds_post_stimulus_end]
-    rec : int 
-        Recording ID 
     fs : float 
         Sampling rate
     plot_params : dict
@@ -89,18 +89,12 @@ def plot_raster_cell_stim(spikes, trials, clusterID,
     stim_ends = stim_trials['stimulus_end'].values
     stim_end_seconds = np.unique((stim_ends - stim_starts)/fs)[0]
     window = [period[0], stim_end_seconds+period[1]]
+    stimrecs = stim_trials['recording'].values
     raster_data = []
-    for trial, start in enumerate(stim_starts):
+    for trial, [start, rec] in enumerate(zip(stim_starts, stimrecs)):
         sptrain = get_spiketrain(rec, start, clusterID, spikes, window, fs)
         raster_data.append(sptrain)
-    if plot_params == None:
-        do_raster(raster_data, window, [0, stim_end_seconds], ax) 
-    else:
-        do_raster(raster_data, window, [0, stim_end_seconds], ax, 
-                  spike_linewidth=plot_params['spike_linewidth'],
-                  spike_color=plot_params['spike_color'],
-                  tick_linewidth=plot_params['tick_linewidth'],
-                  tick_color=plot_params['tick_color'])
+    do_raster(raster_data, window, [0, stim_end_seconds], **kwargs)
 
 def gaussian_psth_func(times, spike_data, sigma):
     '''
@@ -194,6 +188,40 @@ def plot_unit_raster(spikes, trials, clusterID, raster_window, rec, fs, subplot_
              ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(fontsize)
     return f
+
+def plot_all_cells(spikes, trials, clusters, quality, raster_window, fs):
+    '''
+    Plots rasters for all cells of a given quality.
+    The rasters are organized by stimuli; each subplot showing all trials from a given stimulus
+
+    Parameters 
+    ------
+    spikes : dataframe 
+        spike data
+    trials : dataframe 
+        trial data 
+    clusters : dataframe
+        cluster data 
+    quality : str 
+        quality identifier string ('Good', 'MUA', etc) 
+    raster_window : list 
+        Time before stimulus start and after stimulus end to include in plot (e.g. [-2, 2] for 2 secs before and after)
+    fs : int 
+        sampling rate 
+    '''
+
+    clusToPlot = clusters[clusters['quality']==quality]
+    stims = trials['stimulus'].unique()
+    nstims = len(stims)
+    for clu in clusToPlot['cluster'].values:
+        NplotRows = int(np.ceil(nstims/4.0))
+        f, pltaxes = plt.subplots(NplotRows, 4, sharey=True, figsize=(22,18))
+        f.tight_layout()
+        for ind, stim in enumerate(stims):
+            ax = pltaxes.flatten()[ind]
+            rasters.plot_raster_cell_stim(spikes, trials, clu, stim, 
+                                  raster_window, fs, ax=ax)
+            ax.set_title('Cell: {} Stim: {}'.format(clu, stim))
 
 def plot_avg_gaussian_psth_cell_stim(spikes, trials, clusterID, stim, raster_window, rec, fs, ax=None):
     return 0
