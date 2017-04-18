@@ -1,5 +1,5 @@
 import numpy as np
-from core import load_events, get_fs
+from core import load_events, load_fs
     
 class FindEnd():
     def __init__(self):
@@ -192,7 +192,7 @@ def is_correct(consequence):
     except TypeError:
         return consequence
 
-def get_trials(block_path):
+def load_trials(block_path):
     '''
     returns a pandas dataframe containing trial information for a given block_path
 
@@ -232,7 +232,7 @@ def get_trials(block_path):
         )
     stimulus = stimulus[stim_mask]
 
-    fs = get_fs(block_path)
+    fs = load_fs(block_path)
     
     stim_end_mask = digmarks['codes'].isin(('>','#'))
     trials = digmarks[stim_end_mask].apply(lambda row: get_stim_start(row,digmarks),axis=1)[:]

@@ -1,6 +1,49 @@
 # ephys-analysis
 scripts and utilities for processing electrophysiology data
 
+[![Build Status](https://travis-ci.org/gentnerlab/ephys-analysis.svg?branch=master)](https://travis-ci.org/gentnerlab/ephys-analysis)
+[![Coverage Status](https://coveralls.io/repos/github/gentnerlab/ephys-analysis/badge.svg?branch=master)](https://coveralls.io/github/gentnerlab/ephys-analysis?branch=master)
+
+## analysis architercture
+
+what we need to be able to do
+- get spikes from a given trial
+- get spikes from a given stimulus or event
+- get spikes from a given neuron
+- get spikes from a population of neurons
+- make rasters
+- make PSTH
+- plot spike shapes
+- get spike widths
+- identify neuron location
+- cluster quality metrics
+- plot distribution of spike widths in a population
+
+what Zeke also wants
+- save needed metadata into one of the HDF5 files (params.prm, indx_port_site.txt, probe file, _info.json, other)
+
+1. Core
+  - load spikes
+  - load clusters
+  - load events
+  - load spike shapes
+  - load LFP
+  - load metadata
+
+1. Neuron metrics
+  - isolation quality measures
+  - waveform, features
+  - spike width
+  - neuron location
+
+2. Event-responses
+  - rasters
+  - PSTHs
+  - gaussian smoothed
+
+3. Behavior
+  - trial data
+
 ## input file structure
 
 these scripts assume that they are dealing with an experiment that has been sorted by phy. an example structure is as follows:
@@ -86,3 +129,10 @@ If you have code written already that works toward these ends, do the following.
   2. CLICK on the "Pull Requests" tab
   3. CLICK "New Pull Request"
   4. CHOOSE "base: master" and "compare: [whatever you named your branch in step#2]"
+
+## naming conventions
+
+1. Functions that put together a filename are prefixed with 'find_'
+2. Functions that open files on disk and read their contents into memory are prefixed 'load_'
+3. Functions that return an attribute of some (data, object, etc) are prefixed 'get_'
+4. Functions that perform a computation are prefixed 'calc_'

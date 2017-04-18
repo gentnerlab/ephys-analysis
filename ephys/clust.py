@@ -2,7 +2,7 @@ import os
 import glob
 import numpy as np
 from scipy.interpolate import UnivariateSpline
-from core import file_finder, load_probe, get_fs
+from core import file_finder, load_probe, load_fs
 
 @file_finder
 def find_mean_waveforms(block_path,cluster,cluster_store=0,clustering='main'):
@@ -189,7 +189,7 @@ def get_width(block_path,clu,new_fs=1000000.0):
     width : float
         the width of the spike in seconds
     '''
-    fs = get_fs(block_path)
+    fs = load_fs(block_path)
     exemplar = get_spike_exemplar(block_path,clu)
     
     trough,peak = get_troughpeak(*upsample_spike(exemplar,fs,new_fs=new_fs))

@@ -62,7 +62,7 @@ def find_kwd(block_path):
 
 
 @file_finder
-def get_kwx(block_path):
+def find_kwx(block_path):
     '''
     Returns the kwx file found in the block path
     
@@ -94,7 +94,7 @@ def find_prb(block_path):
     return os.path.join(block_path,'*.prb')
 
 @file_finder
-def get_info(block_path):
+def find_info(block_path):
     '''
     Returns the raw.kwd file found in the block path
     
@@ -157,7 +157,7 @@ def load_events(block_path,event_type):
             events[col] = kf['/event_types'][event_type][col][:]
     return pd.DataFrame(events)
 
-def get_fs(block_path):
+def load_fs(block_path):
     '''
     Reads sampling rate in Hz from the kwik file associated with a block
     
@@ -183,7 +183,7 @@ QUAL_LOOKUP = {0: 'Noise',
               }
 
 
-def get_qual(block_path,cluster):
+def load_qual(block_path,cluster):
     '''
     Returns labeled cluster quality ('Noise', 'MUA', 'Good', 'unsorted')
         for a given cluster
@@ -231,7 +231,7 @@ def load_clusters(block_path,channel_group=0,clustering='main'):
             kf['/channel_groups/{}/spikes/clusters/{}'.format(channel_group,clustering)][:]
             )
         clusters = pd.DataFrame({'cluster': observed_clusters})
-        clusters['quality'] = clusters['cluster'].map(lambda clu: get_qual(block_path,clu))
+        clusters['quality'] = clusters['cluster'].map(lambda clu: load_qual(block_path,clu))
     return clusters
 
 def load_spikes(block_path,channel_group=0,clustering='main'):

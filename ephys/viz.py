@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from core import load_probe, get_fs, get_clusters
+from core import load_probe, load_fs, load_clusters
 from clust import get_mean_waveform_array, upsample_spike, find_mean_masks
 from clust import get_cluster_coords, mean_masks_w
 
@@ -72,7 +72,7 @@ def plot_all_clusters(block_path,clusters=None,quality=('Good','MUA'),**kwargs):
     '''
     
     if clusters is None:
-        clusters = get_clusters(block_path)
+        clusters = load_clusters(block_path)
         clusters = clusters[clusters.quality.isin(quality)]
 
     clusters = (
@@ -126,7 +126,7 @@ def plot_spike_shape(block_path,clu,normalize=True,**kwargs):
         keyword arguments are passed to the plot function
     
     '''
-    fs = get_fs(block_path)
+    fs = load_fs(block_path)
     exemplar = get_spike_exemplar(block_path,clu)
     
     time,shape = upsample_spike(exemplar,fs)
@@ -157,7 +157,7 @@ def plot_cluster_locations(block_path,clusters=None,quality=('Good','MUA'),bin_w
     '''
     
     if clusters is None:
-        clusters = get_clusters(block_path)
+        clusters = load_clusters(block_path)
         clusters = clusters[clusters.quality.isin(quality)]
 
     if 'x_probe' not in clusters.columns:
