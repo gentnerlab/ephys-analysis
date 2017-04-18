@@ -269,6 +269,52 @@ def load_spikes(block_path,channel_group=0,clustering='main'):
     return spikes
 
 def load_info(block_path):
+    '''
+    loads the json with metadata for the block
+
+    Parameters
+    ------
+    block_path : str
+        path to the block
+
+    Returns
+    -------
+    info : dict
+        dictionary with metadata
+    '''
     with open(find_info(block_path)) as f:
         info = json.load(f)
     return info
+
+    
+def load_site_coordinates(block_path,export=0):
+    '''
+    loads the coordinates of the recording site
+
+    Parameters
+    ------
+    block_path : str
+        path to the block
+    export : int
+        which exported file
+
+    Returns
+    -------
+    pen_hemisphere
+        hemisphere of the penetration
+    pen_anterior_um
+        distance toward anterior from Y sinus reference
+    pen_lateral_um
+        distance off midline
+    site_depth_um
+        depth of the electrode array
+
+    '''
+    info = load_info(block_path)
+    
+    return (
+        info['exports'][export]['pen']['hemisphere'],
+        info['exports'][export]['pen']['anterior'],
+        info['exports'][export]['pen']['lateral'],
+        info['exports'][export]['site']['depth'],
+    )
