@@ -1,0 +1,14 @@
+# local package
+-e .
+
+# external requirements
+h5py
+pandas
+numpy
+scipy
+seaborn
+matplotlib
+scikit-learn
+nose
+coverage
+coveralls
