@@ -2,8 +2,8 @@
 from UltraMegaSort2000 by Hill DN, Mehta SB, & Kleinfeld D  - 07/12/2010
 ported to Python by Justin Kiggins - Apr 2016
 
-imported GaussianMixter as GMM, not sure what sklearn version was originally
-but if this doesn't work that might be why.
+imported GaussianMixture as GMM, not sure what sklearn version was originally
+but if this doesn't work that might be why. - Marvin Thielk 9/18
 '''
 import numpy as np
 from scipy.stats import norm, chi2
