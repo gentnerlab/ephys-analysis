@@ -10,6 +10,7 @@ seaborn
 matplotlib
 scikit-learn
 googledrivedownloader
+pathlib2
 pytest-ordering
 pytest-cov
 python-coveralls
