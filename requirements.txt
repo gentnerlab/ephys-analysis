@@ -10,5 +10,5 @@ seaborn
 matplotlib
 scikit-learn
 nose
-coverage
-coveralls
+pytest-cov
+python-coveralls
