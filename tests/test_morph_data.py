@@ -4,14 +4,14 @@ from pathlib2 import Path
 
 from ephys import core, rigid_pandas
 
-TEST_FOLDER = Path(__file__).resolve()
+TEST_FOLDER = Path(__file__).resolve().parent
 TEST_DATA = TEST_FOLDER / 'test_data'
 MORPH_DATA = TEST_DATA / 'morph_data'
 
 
 @pytest.mark.run(order=0)
 def test_download_ephys_data():
-    MORPH_DATA.mkdir(parents=True)
+    MORPH_DATA.mkdir(parents=True, exists_ok=True)
     dest_path = MORPH_DATA / 'B1096_cat_P04_S02_1.kwik'
     gdd.download_file_from_google_drive(file_id='12bp8fHCC51PWOiX8QxziY7oM7sOxQetA',
                                         dest_path=dest_path.as_posix())
