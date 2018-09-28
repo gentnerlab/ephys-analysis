@@ -9,6 +9,6 @@ scipy
 seaborn
 matplotlib
 scikit-learn
-nose
+pytest-ordering
 pytest-cov
 python-coveralls
