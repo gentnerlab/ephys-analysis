@@ -9,6 +9,7 @@ scipy
 seaborn
 matplotlib
 scikit-learn
+googledrivedownloader
 pytest-ordering
 pytest-cov
 python-coveralls
