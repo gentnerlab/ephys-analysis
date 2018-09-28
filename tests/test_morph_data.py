@@ -11,8 +11,8 @@ MORPH_DATA = TEST_DATA / 'morph_data'
 
 @pytest.mark.run(order=0)
 def test_download_ephys_data():
-    TEST_DATA.mkdir(parents=True, exists_ok=True)
-    dest_path = TEST_DATA / 'B1096_cat_P04_S02_1.kwik'
+    MORPH_DATA.mkdir(parents=True, exists_ok=True)
+    dest_path = MORPH_DATA / 'B1096_cat_P04_S02_1.kwik'
     gdd.download_file_from_google_drive(file_id='12bp8fHCC51PWOiX8QxziY7oM7sOxQetA',
                                         dest_path=dest_path.as_posix())
     assert dest_path.exists()
