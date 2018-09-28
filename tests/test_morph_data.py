@@ -20,7 +20,7 @@ def test_download_ephys_data():
 
 @pytest.mark.run(order=1)
 def test_something():
-    block_path = MORPH_DATA
+    block_path = MORPH_DATA.as_posix()
     spikes = core.load_spikes(block_path)
 
     stims = rigid_pandas.load_acute_stims(block_path)
