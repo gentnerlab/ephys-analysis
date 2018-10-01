@@ -6,6 +6,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from . import core
 
+
 def kwik2rigid_pandas(block_path):
     '''
     loads data in a manner that is very useful for acute experiments
@@ -39,6 +40,7 @@ def kwik2rigid_pandas(block_path):
     timestamp2time(spikes, fs, 'stim_aligned_time')
     return spikes, stims
 
+
 def load_acute_stims(block_path):
     '''
     Fast code to load up stimuli information for an acute recording
@@ -66,17 +68,21 @@ def load_acute_stims(block_path):
     stim_end : int
         Time in samples of the end of the stimulus
     '''
-    stims = core.load_events(block_path,'DigMark')
-    #assumes one start and one end for each trial
-    stims.loc[stims['codes'] == '<', 'stim_end'] = stims[stims['codes'] == '>']['time_samples'].values
+    stims = core.load_events(block_path, 'DigMark')
+    # assumes one start and one end for each trial
+    stims.loc[stims['codes'] == '<', 'stim_end'] = stims[
+        stims['codes'] == '>']['time_samples'].values
     stims = stims[stims['codes'] == '<']
-    # on some recs there are random date entries in the stim text field at the start... removing them here
-    stimdat = core.load_events(block_path,'Stimulus')
-    stims['stim_name'] = stimdat['text'][stimdat['time_samples'] > stims['time_samples'].min()][1::2].values
+    # on some recs there are random date entries in the stim text field at the
+    # start... removing them here
+    stimdat = core.load_events(block_path, 'Stimulus')
+    stims['stim_name'] = stimdat['text'][stimdat['time_samples'] > stims['time_samples'].min()][
+        1::2].values
     stims.reset_index(drop=True, inplace=True)
     del stims['codes']
     stims.rename(columns={'time_samples': 'stim_start'}, inplace=True)
     return stims
+
 
 def count_events(events, index='stim_name', target='stim_presentation'):
     '''
@@ -94,7 +100,8 @@ def count_events(events, index='stim_name', target='stim_presentation'):
     '''
     events[target] = events[index].map(_EventCounter().count)
 
-def timestamp2time(df, sample_rate, time_stamp_label, 
+
+def timestamp2time(df, sample_rate, time_stamp_label,
                    time_label=None, inplace=True):
     '''
     Converts a column from time samples to time in seconds
@@ -123,20 +130,20 @@ def timestamp2time(df, sample_rate, time_stamp_label,
         df[time_label] = df[time_stamp_label].values / sample_rate
 
 
-
 def raster_by_unit(spikes, cluster, sample_rate, window_size=1, plot_by='stim_name', col_wrap=None):
-    sns.set_context("notebook", font_scale=1.5, 
-                    rc={'lines.markeredgewidth': .1, 'patch.linewidth':1})
+    sns.set_context("notebook", font_scale=1.5,
+                    rc={'lines.markeredgewidth': .1, 'patch.linewidth': 1})
     sns.set_style("white")
     num_repeats = np.max(spikes['stim_presentation'].values)
     num_stims = len(np.unique(spikes[plot_by]))
     if col_wrap is None:
         col_wrap = int(np.sqrt(num_stims))
-    g = sns.FacetGrid(spikes[spikes['cluster']==cluster], 
-        col=plot_by, col_wrap=col_wrap);
-    g.map(_raster, "stim_aligned_time", "stim_presentation", "stim_duration", 
+    g = sns.FacetGrid(spikes[spikes['cluster'] == cluster],
+                      col=plot_by, col_wrap=col_wrap)
+    g.map(_raster, "stim_aligned_time", "stim_presentation", "stim_duration",
           window_size=window_size)
     g = g.set_titles("cluster %d, stim: {col_name}" % (cluster))
+
 
 def _raster(stim_aligned_time, stim_presentation, stim_duration, window_size=1, **kwargs):
     plt.scatter(stim_aligned_time, stim_presentation, marker='|', **kwargs)
@@ -148,10 +155,14 @@ def _raster(stim_aligned_time, stim_presentation, stim_duration, window_size=1, 
     plt.ylim((0, num_repeats))
 
 from collections import Counter
+
+
 class _EventCounter(Counter):
+
     def count(self, key):
         self[key] += 1
         return self[key] - 1
+
 
 def align_events(spikes, events, columns2copy=['stim_name', 'stim_presentation',
                                                'stim_start', 'stim_duration'],
@@ -191,20 +202,22 @@ def align_events(spikes, events, columns2copy=['stim_name', 'stim_presentation',
     grouped_spikes = spikes.groupby('recording')
     for recording, event_recording_group in events.groupby('recording'):
         data.extend(grouped_spikes.get_group(recording)["time_samples"].map(
-            _EventAligner(event_recording_group, output_labels=columns2copy, 
-                start_label=start_label, end_label=end_label,
-                event_index=event_recording_group.index[0]).event_checker))
+            _EventAligner(event_recording_group, output_labels=columns2copy,
+                          start_label=start_label, end_label=end_label,
+                          event_index=event_recording_group.index[0]).event_checker))
     return pd.DataFrame(data=data, columns=columns2copy, index=spikes.index)
+
 
 class _EventAligner(object):
     # TODO: duplicate spikes that are <2 sec from 2 stimuli
-    def __init__(self, events, output_labels, start_label='stim_start', 
+
+    def __init__(self, events, output_labels, start_label='stim_start',
                  end_label='stim_end', event_index=0):
         self.event_index = event_index
         self.start_event_index = event_index
         self.events = events
 
-        event_columns = list(list(events.keys()).get_values())
+        event_columns = list(events.keys().get_values())
         self.output_indices = \
             [event_columns.index(lbl) for lbl in output_labels]
         self.start_index = event_columns.index(start_label)
@@ -212,13 +225,14 @@ class _EventAligner(object):
 
         self.prev_event = None
         self.cur_event = self.events.loc[self.event_index].values
-        self.next_event = self.events.loc[self.event_index+1].values
+        self.next_event = self.events.loc[self.event_index + 1].values
+
     def event_checker(self, time_stamp):
         if time_stamp < self.cur_event[self.start_index]:
             if self.event_index == self.start_event_index or \
-                self.cur_event[self.start_index] - time_stamp < \
-                time_stamp - self.prev_event[self.end_index]:
-                    return self.cur_event[self.output_indices]
+                    self.cur_event[self.start_index] - time_stamp < \
+                    time_stamp - self.prev_event[self.end_index]:
+                return self.cur_event[self.output_indices]
             else:
                 return self.prev_event[self.output_indices]
         elif time_stamp < self.cur_event[self.end_index]:
@@ -229,7 +243,7 @@ class _EventAligner(object):
                 self.prev_event = self.cur_event
                 self.cur_event = self.next_event
                 if self.event_index + 1 < len(self.events):
-                    self.next_event = self.events.loc[self.event_index+1].values
+                    self.next_event = self.events.loc[self.event_index + 1].values
                 else:
                     self.next_event = None
                 return self.event_checker(time_stamp)
