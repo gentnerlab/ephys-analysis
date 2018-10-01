@@ -1,9 +1,11 @@
+from __future__ import absolute_import
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from .core import load_probe, load_fs, load_clusters
 from .clust import get_mean_waveform_array, upsample_spike, find_mean_masks
 from .clust import get_cluster_coords, mean_masks_w, get_spike_exemplar
+from six.moves import zip
 
 
 def plot_cluster(block_path, cluster, chan_alpha=None, scale_factor=0.05, color='0.5', **plot_kwargs):
@@ -170,7 +172,7 @@ def plot_cluster_locations(block_path, clusters=None, quality=('Good', 'MUA'), b
         )
 
     prb_info = load_probe(block_path)
-    coords = np.array(prb_info.channel_groups[0]['geometry'].values())
+    coords = np.array(list(prb_info.channel_groups[0]['geometry'].values()))
 
     x_bds = coords[:, 0].min(), coords[:, 0].max()
     x_mid = sum(x_bds) / 2.0

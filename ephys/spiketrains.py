@@ -1,4 +1,6 @@
+from __future__ import absolute_import
 import numpy as np
+from six.moves import zip
 
 
 def get_spiketrain(rec, samps, clu, spikes, window, fs):

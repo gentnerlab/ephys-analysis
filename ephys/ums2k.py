@@ -5,10 +5,13 @@ ported to Python by Justin Kiggins - Apr 2016
 imported GaussianMixture as GMM, not sure what sklearn version was originally
 but if this doesn't work that might be why. - Marvin Thielk 9/18
 '''
+from __future__ import absolute_import
+from __future__ import print_function
 import numpy as np
 from scipy.stats import norm, chi2
 from sklearn.decomposition import PCA
 from sklearn.mixture import GaussianMixture as GMM
+from six.moves import range
 
 
 def censored(tau_c, M, T):
@@ -357,7 +360,7 @@ def stdev_guesser(thresh_val, n, x, m):
     '''
     # initial guess is juts the RMS of just the values below the mean
     init = m + np.sqrt(np.mean((m - (n * x)[thresh_val <= m])**2))
-    print init
+    print(init)
 
     num = 100
     factor = 10

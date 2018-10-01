@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 import subprocess
 import tempfile
@@ -6,6 +8,7 @@ import numpy as np
 import h5py as h5
 import pandas as pd
 from .core import load_clusters, load_spikes, find_kwx
+from six.moves import range
 
 
 def make_isotools_features(block_path, features_file, do_noise=False):
@@ -76,7 +79,7 @@ def run_isorat(features_file, isorat_output):
     cmd = ['/usr/bin/env', 'isorat', features_file, isorat_output]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     for line in p.stdout:
-        print line
+        print(line)
     p.wait()
     return p.returncode
 
@@ -100,7 +103,7 @@ def run_isoi(features_file, isoi_output):
     cmd = ['/usr/bin/env', 'isoi', features_file, isoi_output]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     for line in p.stdout:
-        print line
+        print(line)
     p.wait()
     return p.returncode
 

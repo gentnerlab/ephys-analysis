@@ -1,9 +1,12 @@
+from __future__ import absolute_import
+from __future__ import print_function
 from ephys.spiketrains import get_spiketrain
 from ephys import core
 from ephys import events
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+from six.moves import zip
 
 
 def do_raster(raster_data, times, ticks, ax=None, spike_linewidth=1.5,

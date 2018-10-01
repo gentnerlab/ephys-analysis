@@ -1,9 +1,10 @@
+from __future__ import absolute_import
 import h5py
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-import core
+from . import core
 
 def kwik2rigid_pandas(block_path):
     '''
@@ -203,7 +204,7 @@ class _EventAligner(object):
         self.start_event_index = event_index
         self.events = events
 
-        event_columns = list(events.keys().get_values())
+        event_columns = list(list(events.keys()).get_values())
         self.output_indices = \
             [event_columns.index(lbl) for lbl in output_labels]
         self.start_index = event_columns.index(start_label)

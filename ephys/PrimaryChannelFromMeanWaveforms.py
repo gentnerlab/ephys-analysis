@@ -1,7 +1,9 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import os
 
 pwd_path=os.getcwd()
-print pwd_path
+print(pwd_path)
 BirdID=pwd_path.split('/')[7]
 klustaID=pwd_path.split('/')[9]
 SiteID=pwd_path.split('/')[10]
@@ -55,4 +57,4 @@ makedict = {'cluster_id':cluster_id,'prb_location_microns':prb_location_microns}
 savename = '/'.join((klustadir, 'cluster_info.mat'))
 sio.savemat(savename,makedict)
 
-print 'saved to:  ' + savename
+print('saved to:  ' + savename)
