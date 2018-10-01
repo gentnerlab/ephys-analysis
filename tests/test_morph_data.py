@@ -19,7 +19,7 @@ def test_download_ephys_data():
 
 
 @pytest.mark.run(order=1)
-def test_something():
+def test_rigid_pandas():
     block_path = MORPH_DATA.as_posix()
     spikes = core.load_spikes(block_path)
 
@@ -43,3 +43,9 @@ def test_something():
     spikes['stim_aligned_time'] = (spikes['time_samples'].values.astype('int') -
                                    spikes['stim_start'].values)
     rigid_pandas.timestamp2time(spikes, fs, 'stim_aligned_time')
+
+
+@pytest.mark.run(order=1)
+def test_kwik2rigid_pandas():
+    block_path = MORPH_DATA.as_posix()
+    spikes, stims = rigid_pandas.kwik2rigid_pandas(block_path)
