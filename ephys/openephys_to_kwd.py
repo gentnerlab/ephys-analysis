@@ -10,6 +10,7 @@ SAMPLES_PER_RECORD = 1024
 BYTES_PER_SAMPLE = 2
 RECORD_SIZE = 4 + 8 + SAMPLES_PER_RECORD*BYTES_PER_SAMPLE + 10
 RECORD_RECORDING_OFFSET = 8+2
+RECORD_TIMESTAMP_OFFSET = 0
 
 
 def find_continuous_files(data_dir):
@@ -22,7 +23,7 @@ def get_n_channels(continuous_files):
     return len(continuous_files)
 
 def initialize_kwd_file(data_dir, experiment_name):
-    # Create an empty KWD file with the appropriate structur
+    # Create an empty KWD file with the appropriate structure
     kwd_filename = experiment_name + '.raw.kwd'
     kwd_file = h5.File(os.path.join(data_dir, kwd_filename), "w-")
     kwd_file.create_group("recordings")
@@ -87,7 +88,7 @@ def load_openephys_continuous_record(oe_file, record_num):
     recording_start_sample = int(data[0, 0])
 
     return (record_num, record_recording_number, recording_start_sample, data)
-    
+
 def get_openephys_continuous_recording_numbers(oe_file):
     # Returns an array of recording numbers within a .continuous file
     recordings = []
@@ -100,10 +101,48 @@ def get_openephys_continuous_recording_numbers(oe_file):
         recordings.append(record_recording_number)
     return recordings
 
+def get_openephys_continuous_timestamps(oe_file):
+    # Returns an array of recording numbers within a .continuous file
+    timestamps = []
+    (n_records, n_samples) = calculate_openephys_continuous_sizes(oe_file)
+    for record in range(n_records):
+        record_offset = 1024 + record*RECORD_SIZE
+        timestamp_offset = record_offset + RECORD_TIMESTAMP_OFFSET
+        oe_file.seek(timestamp_offset)
+        record_timestamp = np.fromfile(oe_file, np.dtype('<i8'), 1)
+        timestamps.append(record_timestamp)
+    return timestamps
+
+def get_openephys_continuous_record_metadata(oe_file):
+    # Returns an array of recording numbers within a .continuous file
+    recordings = []
+    timestamps = []
+    (n_records, n_samples) = calculate_openephys_continuous_sizes(oe_file)
+    for record in range(n_records):
+        record_offset = 1024 + record*RECORD_SIZE
+        timestamp_offset = record_offset + RECORD_TIMESTAMP_OFFSET
+        recording_offset = record_offset + RECORD_RECORDING_OFFSET
+        oe_file.seek(timestamp_offset)
+        record_timestamp = np.fromfile(oe_file, np.dtype('<i8'), 1)
+        timestamps.append(record_timestamp)
+        oe_file.seek(recording_offset)
+        record_recording_number = np.fromfile(oe_file, np.dtype('>u2'), 1)[0]
+        recordings.append(record_recording_number)
+    return (recordings, timestamps)
+
 def get_openephys_continuous_record_recording_number(oe_file, record):
     offset = 1024 + record*RECORD_SIZE + RECORD_RECORDING_OFFSET
     oe_file.seek(offset)
     return np.fromfile(oe_file, np.dtype('>u2'), 1)[0]
+
+def get_openephys_continuous_record_timestamp(oe_file, record):
+    offset = 1024 + record*RECORD_SIZE + RECORD_TIMESTAMP_OFFSET
+    oe_file.seek(offset)
+    return np.fromfile(oe_file, np.dtype('<i8'), 1)
+
+def get_openephys_continuous_recording_timestamps(oe_file, recording):
+    (recordings, timestamps) = get_openephys_continuous_record_metadata(oe_file)
+    return timestamps[recordings == recording]
 
 def get_openephys_unique_recording_numbers(continuous_files):
     recordings = []
@@ -137,26 +176,36 @@ def get_openephys_channel_number(continuous_file):
 def build_kwd_recording(kwd_file, continuous_files, recording_number):
     n_channels = get_n_channels(continuous_files)
     n_samples = check_n_samples_consistency(continuous_files)
-    #data = np.zeros((n_samples, n_channels), dtype=np.int16)
-
     dset = kwd_file.create_dataset("/recordings/{}/data".format(recording_number),
                             (n_samples, n_channels), dtype='int16')
+
+    channel_bit_volts = np.zeros(n_channels)
+    channel_sample_rates = np.zeros(n_channels)
+    channel_timestamps = []
 
     for cf in continuous_files:
         # get channel number
         channel = get_openephys_channel_number(cf)
         print("Storing channel {} of {}".format(channel, n_channels))
         with open(cf, "rb") as oe_file:
+            cf_header = read_openephys_header(oe_file)
+            channel_sample_rates[channel] = int(cf_header['sampleRate'])
+            channel_bit_volts[channel] = float(cf_header['bitVolts'])
+
             (n_records, n_oe_file_samples) = calculate_openephys_continuous_sizes(oe_file)
-            for record in range(n_records):
-                if get_openephys_continuous_record_recording_number(oe_file, record) != recording_number:
-                    continue
+            (recordings, timestamps) = get_openephys_continuous_record_metadata(oe_file)
+            recordings = np.array(recordings)
+            timestamps = np.array(timestamps)
+            recording_records = np.arange(n_records)[recordings==recording_number]
+            channel_timestamps.append(timestamps)
+            for record_ind, record in enumerate(recording_records):
                 record_data_list = load_openephys_continuous_record(oe_file, record)
                 record_data = record_data_list[3] 
-                record_start = record_data_list[2]
-                #data[record_data[0, :], channel] = record_data[1, :] 
-                record_sample_lo = int(record_data[0, 0]) - record_start
-                record_sample_hi = int(record_data[-1, 0]+1) - record_start
-                #print(record_sample_lo, record_sample_hi)
-                #print(channel, record, n_samples, n_records)
+                record_sample_lo = record_ind*SAMPLES_PER_RECORD
+                record_sample_hi = record_ind*SAMPLES_PER_RECORD + SAMPLES_PER_RECORD
+                #print(record_ind, record, record_sample_lo, record_sample_hi, n_records, n_samples)
                 dset[record_sample_lo:record_sample_hi, channel] = record_data[:, 1]
+    kwd_file.create_dataset("/recordings/{}/application_data/channel_sample_rates".format(recording_number), data=channel_sample_rates)
+    kwd_file.create_dataset("/recordings/{}/application_data/channel_bit_volts".format(recording_number), data=channel_bit_volts)
+    kwd_file.create_dataset("/recordings/{}/application_data/timestamps".format(recording_number), data=np.array(channel_timestamps))
+
