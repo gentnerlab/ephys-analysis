@@ -63,32 +63,23 @@ def load_openephys_continuous_record(oe_file, record_num):
     
     # Calculate start of record in bytes
     record_start = 1024 + record_num*RECORD_SIZE
-
     # Move to start of record
     oe_file.seek(record_start)
-
     # Get Timestamp
     record_timestamp = np.fromfile(oe_file, np.dtype('<i8'), 1)
-    
     # Get Number of samples
     record_n_samples = np.fromfile(oe_file, np.dtype('<u2'), 1)[0]
-
     if record_n_samples != SAMPLES_PER_RECORD:
         raise Exception('Found corrupted record in ' + str(record_num))
-
     # Get recording number
     record_recording_number = np.fromfile(oe_file, np.dtype('>u2'), 1)[0]
-
     # Get raw record data
     record_raw_data = np.fromfile(oe_file, np.dtype('>i2'), record_n_samples)
-
     # Ignore record marker
     oe_file.read(10)  
-
     # Make array of timesamples
     sample_numbers = np.arange(record_timestamp, 
                                record_timestamp + record_n_samples)
-    
     # Make data array
     data = np.zeros((record_n_samples, 2))
     data[:, 0] = sample_numbers
