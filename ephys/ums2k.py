@@ -1,13 +1,20 @@
 '''
 from UltraMegaSort2000 by Hill DN, Mehta SB, & Kleinfeld D  - 07/12/2010
 ported to Python by Justin Kiggins - Apr 2016
+
+imported GaussianMixture as GMM, not sure what sklearn version was originally
+but if this doesn't work that might be why. - Marvin Thielk 9/18
 '''
+from __future__ import absolute_import
+from __future__ import print_function
 import numpy as np
 from scipy.stats import norm, chi2
 from sklearn.decomposition import PCA
-from sklearn.mixture import GMM
+from sklearn.mixture import GaussianMixture as GMM
+from six.moves import range
 
-def censored(tau_c,M,T):
+
+def censored(tau_c, M, T):
     '''
     returns the expected false negative rate due to censoring
 
@@ -38,8 +45,7 @@ def censored(tau_c,M,T):
     c 
         estimated false negative fraction from censoring
     '''
-    return (tau_c/1000.0) * M / T
-
+    return (tau_c / 1000.0) * M / T
 
 
 def gaussian_overlap(w1, w2):
@@ -72,7 +78,7 @@ def gaussian_overlap(w1, w2):
     ------
     C 
         a confusion matrix
-    
+
     C[0,0] - False positive fraction in cluster 1 (waveforms of neuron 2 that were assigned to neuron 1)
     C[0,1] - False negative fraction in cluster 1 (waveforms of neuron 1 that were assigned to neuron 2)
     C[1,0] - False negative fraction in cluster 2 
@@ -82,44 +88,45 @@ def gaussian_overlap(w1, w2):
     N1 = w1.shape[0]
     N2 = w2.shape[0]
 
-    X = np.concatenate((w1,w2))
+    X = np.concatenate((w1, w2))
     pca = PCA()
     pca.fit(X)
     Xn = pca.transform(X)
-    
+
     cutoff = 0.98
     num_dims = (np.cumsum(pca.explained_variance_ratio_) < cutoff).sum()
-            
-    w1 = Xn[:N1,:num_dims]
-    w2 = Xn[N1:,:num_dims]
-  
-    
+
+    w1 = Xn[:N1, :num_dims]
+    w2 = Xn[N1:, :num_dims]
+
     # fit 2 multivariate gaussians
     gmm = GMM(n_components=2)
-    gmm.fit(np.vstack((w1,w2)))
-    
-   
+    gmm.fit(np.vstack((w1, w2)))
+
     # get posteriors
     pr1 = gmm.predict_proba(w1)
     pr2 = gmm.predict_proba(w2)
 
-    # in the unlikely case that the cluster identities were flipped during the fitting procedure, flip them back
-    if pr1[:,0].mean() + pr2[:,1].mean() < 1:
-        pr1 = pr1[:,[1,0]];
-        pr2 = pr2[:,[1,0]];
-    
-    # create confusion matrix
-    confusion = np.zeros((2,2))
+    # in the unlikely case that the cluster identities were flipped during the
+    # fitting procedure, flip them back
+    if pr1[:, 0].mean() + pr2[:, 1].mean() < 1:
+        pr1 = pr1[:, [1, 0]]
+        pr2 = pr2[:, [1, 0]]
 
-    confusion[0,0] = pr1[:,1].mean()   # probability that a member of 1 is false
-    confusion[0,1] = pr2[:,0].sum()/N1  # relative proportion of spikes that were placed in cluster 2 by mistake
-    confusion[1,1] = pr2[:,0].mean()   # probability that a member of 2 was really from 1
-    confusion[1,0] = pr1[:,1].sum()/N2  # relative proportion of spikes that were placed in cluster 1 by mistake
-    
+    # create confusion matrix
+    confusion = np.zeros((2, 2))
+
+    confusion[0, 0] = pr1[:, 1].mean()   # probability that a member of 1 is false
+    # relative proportion of spikes that were placed in cluster 2 by mistake
+    confusion[0, 1] = pr2[:, 0].sum() / N1
+    confusion[1, 1] = pr2[:, 0].mean()   # probability that a member of 2 was really from 1
+    # relative proportion of spikes that were placed in cluster 1 by mistake
+    confusion[1, 0] = pr1[:, 1].sum() / N2
+
     return confusion
 
 
-def poissfit(data,alpha=0.05):
+def poissfit(data, alpha=0.05):
     '''
     estimates the parameters of a poisson distribution
 
@@ -138,27 +145,28 @@ def poissfit(data,alpha=0.05):
         the confidence intervals 
 
     '''
-    
+
     r = np.array(data)
-    
+
     lambdahat = r.mean(axis=0)
-    
-    def lower(lh): 
-        return chi2.ppf(alpha/2, 2*lh*r.shape[0]) / (2*r.shape[0])
+
+    def lower(lh):
+        return chi2.ppf(alpha / 2, 2 * lh * r.shape[0]) / (2 * r.shape[0])
     lower = np.vectorize(lower)
 
     def upper(lh):
-        return max(0.0,chi2.ppf(1-alpha/2, 2*lh*r.shape[0] + 2) / (2*r.shape[0]))
+        return max(0.0, chi2.ppf(1 - alpha / 2, 2 * lh * r.shape[0] + 2) / (2 * r.shape[0]))
     upper = np.vectorize(upper)
 
     lambdaci = np.array((
         lower(lambdahat),
         upper(lambdahat)
-        ))
-    
+    ))
+
     return lambdahat, lambdaci
 
-def rpv_contamination(N, T, RP, RPV ,alpha=0.05):
+
+def rpv_contamination(N, T, RP, RPV, alpha=0.05):
     '''
     get range of contamination
 
@@ -222,67 +230,69 @@ def rpv_contamination(N, T, RP, RPV ,alpha=0.05):
         upper bound on % contamination, using alpha confidence interval
     '''
 
-    lambda_ = N/T  # mean firing rate for cluster 
+    lambda_ = N / T  # mean firing rate for cluster
 
     # get Poisson confidence interval on number of expected RPVs
-    dummy, interval = poissfit(RPV,alpha)
+    dummy, interval = poissfit(RPV, alpha)
 
     # convert contamination from number of RPVs to a percentage of spikes
-    lb = convert_to_percentage(interval[0], RP, N, T, lambda_) 
-    ub = convert_to_percentage(interval[1], RP, N, T, lambda_) 
+    lb = convert_to_percentage(interval[0], RP, N, T, lambda_)
+    ub = convert_to_percentage(interval[1], RP, N, T, lambda_)
     ev = convert_to_percentage(RPV, RP, N, T, lambda_)
-    
+
     return ev, lb, ub
 
-def convert_to_percentage( RPV, RP, N, T, lambda_ ):
+
+def convert_to_percentage(RPV, RP, N, T, lambda_):
     # converts contamination from number of RPVs to a percentage of spikes
 
-    RPVT = 2 * RP * N # total amount of time in which an RPV could occur
-    RPV_lambda = RPV / RPVT # rate of RPV occurence
-    p =  RPV_lambda / lambda_ # estimate of % contamination of cluster
-    
+    RPVT = 2 * RP * N  # total amount of time in which an RPV could occur
+    RPV_lambda = RPV / RPVT  # rate of RPV occurence
+    p = RPV_lambda / lambda_  # estimate of % contamination of cluster
+
     # force p to be a real number in [0 1]
     if np.isnan(p):
-        p = 0 
+        p = 0
     elif p > 1:
-        p = 1  
+        p = 1
     return p
 
-def undetected(w,threshes,criteria_func='auto'):
+
+def undetected(w, threshes, criteria_func='auto'):
     '''
     UltraMegaSort2000 by Hill DN, Mehta SB, & Kleinfeld D  - 07/12/201
-    
+
     undetected - estimate fraction of events that did not reach threshold
-    
+
     Usage:
         [p,mu,stdev,n,x] = undetected(waveforms,threshes,criteria_func)
-    
+
     Description:  
     Estimates fraction of events that did not reach threshold by applying 
     the detection metric to each waveform and then fitting it with a Gaussian 
     that has a missing tail.
-    
+
     The distribution of detection metric values is turned into a histogram.  
     A Gaussian is fit to the historgram to minimize the absolute error 
     between the Gaussian and the histogram for values above threshold.  
     The integral of this Gaussian that is below threshold is the estimate of 
     the fraction of missing events.
-    
+
     Note that values are normalized so that the threshold is +/- 1.  The function
     attempts to preserve the sign of the original threshold, unless thresholds
     on different channels had different signs. In the case of multiple channels, 
     each channel is normalized so that the threshold has a magnitude of 1.  Then, 
     for each event, only the channel with the most extreme value of the detection 
     metric is used. 
-    
+
     By default, this function assumes that a simple voltage crossing was used 
     for detection, but see "criteria_fun" below for alternatives. In the case 
     of a simple voltage threshold, note that the threshold is interpreted as 
     responding to crossings away from zero, i.e., negative thresholds 
     imply negative-going crossings and positive thresholds imply 
     positive-going crossings. 
-    
-    
+
+
     Input:
         waveforms  - [Events X Samples X Channels] the waveforms of the cluster
         threshes   - [1 X Channels] the threshold for each channel
@@ -298,21 +308,21 @@ def undetected(w,threshes,criteria_func='auto'):
                           criteria = criteria_func( waveforms, threshes)
                        It is assumed that the values of criteria are normalized 
                        to use a threshold value of + 1.
-    
+
     Output:
         p            - estimate of probability that a spike is missing because it didn't reach threshhold
         mu           - mean estimated for gaussian fit
         stdev        - standard deviation estimated for gaussian fit
         n            - bin counts for histogram used to fit Gaussian
         x            - bin centers for histogram used to fit Gaussian
-    
+
     '''
 
     # constant bin count
     bins = 75
 
     # check for detection method
-    if (criteria_func=='auto') or (criteria_func=='manual'):
+    if (criteria_func == 'auto') or (criteria_func == 'manual'):
         # normalize all waveforms by threshold
         w /= threshes
 
@@ -323,54 +333,55 @@ def undetected(w,threshes,criteria_func='auto'):
 
     # create the histogram values
     global_max = criteria.max()
-    mylims = np.linspace(1,global_max,bins+1)
-    x = mylims + (mylims[1] - mylims[0])/2
-    n = histc(criteria,mylims)
+    mylims = np.linspace(1, global_max, bins + 1)
+    x = mylims + (mylims[1] - mylims[0]) / 2
+    n = histc(criteria, mylims)
 
     # fit the histogram with a cutoff gaussian
-    m = mode_guesser(criteria,.05)              # use mode instead of mean, since tail might be cut off
-    stdev,mu = stdev_guesser(criteria, n, x, m) # fit the standard deviation as well
+    # use mode instead of mean, since tail might be cut off
+    m = mode_guesser(criteria, .05)
+    stdev, mu = stdev_guesser(criteria, n, x, m)  # fit the standard deviation as well
 
     # Now make an estimate of how many spikes are missing, given the Gaussian and the cutoff
-    p = norm.cdf( 1,mu,stdev)
+    p = norm.cdf(1, mu, stdev)
 
     # attempt to keep values negative if all threshold values were negative
     if (threshes < 0).all():
         mu *= -1
         x *= -1
-    
-    return p,mu,stdev,n,x
 
-def stdev_guesser( thresh_val, n, x, m):
+    return p, mu, stdev, n, x
+
+
+def stdev_guesser(thresh_val, n, x, m):
     '''
     fit the standard deviation to the histogram by looking for an accurate
     match over a range of possible values
     '''
     # initial guess is juts the RMS of just the values below the mean
-    init = m+ np.sqrt(np.mean((m-(n*x)[thresh_val<=m])**2) )
-    print init
+    init = m + np.sqrt(np.mean((m - (n * x)[thresh_val <= m])**2))
+    print(init)
 
     num = 100
     factor = 10
-    st_guesses = np.linspace(max(init/factor,0.001),init*factor/5,num)
-    m_guesses  = np.linspace(m-init,max(m+init,1),num)
-    error = np.empty((m_guesses.shape[0],st_guesses.shape[0]))
-    for j  in range(len(m_guesses)):
+    st_guesses = np.linspace(max(init / factor, 0.001), init * factor / 5, num)
+    m_guesses = np.linspace(m - init, max(m + init, 1), num)
+    error = np.empty((m_guesses.shape[0], st_guesses.shape[0]))
+    for j in range(len(m_guesses)):
         for k in range(len(st_guesses)):
-            b = stats.norm.pdf(x,m_guesses[j],st_guesses[k])
+            b = stats.norm.pdf(x, m_guesses[j], st_guesses[k])
             b = b * np.sum(n) / np.sum(b)
-            error[j,k] = np.sum(np.abs(b-n))
-            
-    
+            error[j, k] = np.sum(np.abs(b - n))
+
     plt.xlabel('stdev')
     plt.ylabel('mean')
-    
+
     # which one has the least error?
     pos = error.argmin()
-    jpos,kpos = np.unravel_index(pos,error.shape)
-    
+    jpos, kpos = np.unravel_index(pos, error.shape)
+
     # refine mode estimate
     stdev = st_guesses[kpos]
     m = m_guesses[jpos]
 
-    return stdev,m
+    return stdev, m

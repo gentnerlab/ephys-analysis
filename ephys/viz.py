@@ -1,11 +1,14 @@
+from __future__ import absolute_import
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from core import load_probe, load_fs, load_clusters
-from clust import get_mean_waveform_array, upsample_spike, find_mean_masks
-from clust import get_cluster_coords, mean_masks_w
+from .core import load_probe, load_fs, load_clusters
+from .clust import get_mean_waveform_array, upsample_spike, find_mean_masks
+from .clust import get_cluster_coords, mean_masks_w, get_spike_exemplar
+from six.moves import zip
 
-def plot_cluster(block_path,clu,chan_alpha=None,scale_factor=0.05,color='0.5',**plot_kwargs):
+
+def plot_cluster(block_path, cluster, chan_alpha=None, scale_factor=0.05, color='0.5', **plot_kwargs):
     '''
     Plots the mean waveforms on each channel for a single cluster, in the 
         geometric layout from the probe file. 
@@ -14,7 +17,7 @@ def plot_cluster(block_path,clu,chan_alpha=None,scale_factor=0.05,color='0.5',**
     ------
     block_path : str
         the path to the block
-    clu : int
+    cluster : int
         the cluster identifier
     chan_alpha : numpy array
         an array of alpha values to use for each channel
@@ -27,7 +30,7 @@ def plot_cluster(block_path,clu,chan_alpha=None,scale_factor=0.05,color='0.5',**
     
     '''
 
-    #load the probe coordinates
+    # load the probe coordinates
     prb_info = load_probe(block_path)
     channels = prb_info.channel_groups[0]['channels']
     geometry = prb_info.channel_groups[0]['geometry']
@@ -36,15 +39,15 @@ def plot_cluster(block_path,clu,chan_alpha=None,scale_factor=0.05,color='0.5',**
     if chan_alpha is None:
         chan_alpha = np.ones(len(coords))
 
-    mean_waveform_array = get_mean_waveform_array(block_path,clu)
-    
-    for waveform,xy,alpha in zip(mean_waveform_array.T,coords,chan_alpha):
-        plt.plot(xy[0]+np.arange(len(waveform))-len(waveform)/2,
-                 waveform*scale_factor+xy[1],
+    mean_waveform_array = get_mean_waveform_array(block_path, cluster)
+
+    for waveform, xy, alpha in zip(mean_waveform_array.T, coords, chan_alpha):
+        plt.plot(xy[0] + np.arange(len(waveform)) - len(waveform) / 2,
+                 waveform * scale_factor + xy[1],
                  color=color,
                  alpha=alpha,
                  **plot_kwargs
-                )
+                 )
         try:
             # if we get a label, let's only apply it once
             label = plot_kwargs.pop('label')
@@ -52,8 +55,7 @@ def plot_cluster(block_path,clu,chan_alpha=None,scale_factor=0.05,color='0.5',**
             pass
 
 
-
-def plot_all_clusters(block_path,clusters=None,quality=('Good','MUA'),**kwargs):
+def plot_all_clusters(block_path, clusters=None, quality=('Good', 'MUA'), **kwargs):
     '''
     Plots the mean waveforms for all clusters in a block, in the 
         geometric layout from the probe file. 
@@ -70,28 +72,27 @@ def plot_all_clusters(block_path,clusters=None,quality=('Good','MUA'),**kwargs):
         keyword arguments are passed to the plot function
     
     '''
-    
+
     if clusters is None:
         clusters = load_clusters(block_path)
         clusters = clusters[clusters.quality.isin(quality)]
 
     clusters = (
         clusters
-        .sort_values(['quality','cluster'])
-        .reset_index()
-        )
+            .sort_values(['quality', 'cluster'])
+            .reset_index()
+    )
 
     palette = sns.color_palette("hls", len(clusters))
 
-    for idx,cluster_row in clusters.iterrows():
-
-        lbl = "{}({})".format(cluster_row.cluster,cluster_row.quality)
+    for idx, cluster_row in clusters.iterrows():
+        lbl = "{}({})".format(cluster_row.cluster, cluster_row.quality)
 
         # use mean mask for alpha transparency
         mean_masks_array = np.fromfile(
-            find_mean_masks(block_path,cluster_row.cluster),
+            find_mean_masks(block_path, cluster_row.cluster),
             dtype=np.float32
-            )
+        )
 
         plot_cluster(block_path,
                      cluster_row.cluster,
@@ -103,22 +104,21 @@ def plot_all_clusters(block_path,clusters=None,quality=('Good','MUA'),**kwargs):
 
     plt.axis('equal')
     leg = plt.legend(loc='center left')
-    [plt.setp(label, alpha = 1.0) for label in leg.get_lines()]
-    sns.despine(bottom=True,left=True)
+    [plt.setp(label, alpha=1.0) for label in leg.get_lines()]
+    sns.despine(bottom=True, left=True)
     plt.xticks([])
     plt.yticks([])
 
 
-
-def plot_spike_shape(block_path,clu,normalize=True,**kwargs):
+def plot_spike_shape(block_path, cluster, normalize=True, **kwargs):
     '''
-    Plots the upsampled spike shape, aligned to the trough. 
+    Plots the upsampled spike shape, aligned to the trough.
     
     Parameters
     ------
     block_path : str
         the path to the block
-    clu : int
+    cluster : int
         the cluster identifier
     normalize : boolean
         scale the spike shape to the depth of the trough
@@ -127,17 +127,18 @@ def plot_spike_shape(block_path,clu,normalize=True,**kwargs):
     
     '''
     fs = load_fs(block_path)
-    exemplar = get_spike_exemplar(block_path,clu)
-    
-    time,shape = upsample_spike(exemplar,fs)
-    time -= time[shape.argmin()]
-    
-    if normalize==True:
-        shape /= -shape[shape.argmin()]
-    
-    plt.plot(time,shape,**kwargs)
+    exemplar = get_spike_exemplar(block_path, cluster)
 
-def plot_cluster_locations(block_path,clusters=None,quality=('Good','MUA'),bin_width=50.0,**kwargs):
+    time, shape = upsample_spike(exemplar, fs)
+    time -= time[shape.argmin()]
+
+    if normalize == True:
+        shape /= -shape[shape.argmin()]
+
+    plt.plot(time, shape, **kwargs)
+
+
+def plot_cluster_locations(block_path, clusters=None, quality=('Good', 'MUA'), bin_width=50.0, **kwargs):
     '''
     Plots the distribution of cluster locations.
     
@@ -155,38 +156,66 @@ def plot_cluster_locations(block_path,clusters=None,quality=('Good','MUA'),bin_w
         keyword arguments are passed to the plot function
     
     '''
-    
+
     if clusters is None:
         clusters = load_clusters(block_path)
         clusters = clusters[clusters.quality.isin(quality)]
 
     if 'x_probe' not in clusters.columns:
         clusters['x_probe'] = clusters['cluster'].map(
-            lambda clu: get_cluster_coords(block_path,clu,weight_func=mean_masks_w)[0]
+            lambda clu: get_cluster_coords(block_path, clu, weight_func=mean_masks_w)[0]
         )
 
     if 'y_probe' not in clusters.columns:
         clusters['y_probe'] = clusters['cluster'].map(
-            lambda clu: get_cluster_coords(block_path,clu,weight_func=mean_masks_w)[1]
+            lambda clu: get_cluster_coords(block_path, clu, weight_func=mean_masks_w)[1]
         )
 
     prb_info = load_probe(block_path)
-    coords = np.array(prb_info.channel_groups[0]['geometry'].values())
+    coords = np.array(list(prb_info.channel_groups[0]['geometry'].values()))
 
-    x_bds = coords[:,0].min(),coords[:,0].max()
+    x_bds = coords[:, 0].min(), coords[:, 0].max()
     x_mid = sum(x_bds) / 2.0
-    y_bds = coords[:,1].min(),coords[:,1].max()
+    y_bds = coords[:, 1].min(), coords[:, 1].max()
     y_mid = sum(y_bds) / 2.0
-    bins = np.arange(coords.min(),coords.max()+2*bin_width,bin_width)-bin_width/2
-    half_span = (bins.max()-bins.min()) / 2
+    bins = np.arange(coords.min(), coords.max() + 2 * bin_width, bin_width) - bin_width / 2
+    half_span = (bins.max() - bins.min()) / 2
 
-    loc_plot = sns.jointplot('x_probe','y_probe',data=clusters,
+    loc_plot = sns.jointplot('x_probe', 'y_probe', data=clusters,
                              stat_func=None,
-                             marginal_kws={'bins':bins},
+                             marginal_kws={'bins': bins},
                              **kwargs)
 
     loc_plot.ax_joint.set_aspect('equal')
-    loc_plot.ax_joint.set_xlim(x_mid-half_span,x_mid+half_span)
-    loc_plot.ax_joint.set_ylim(y_mid-half_span,y_mid+half_span)
-    loc_plot.ax_joint.set_xticks(np.unique(coords[:,0]))
-    loc_plot.ax_joint.set_yticks(np.unique(coords[:,1]))
+    loc_plot.ax_joint.set_xlim(x_mid - half_span, x_mid + half_span)
+    loc_plot.ax_joint.set_ylim(y_mid - half_span, y_mid + half_span)
+    loc_plot.ax_joint.set_xticks(np.unique(coords[:, 0]))
+    loc_plot.ax_joint.set_yticks(np.unique(coords[:, 1]))
+
+
+def plot_mean_cluster_waveforms(waveforms, cluster_map, figsize=(15, 15), sharey=False):
+    '''
+    Plot a grid of the mean cluster waveforms
+
+    Parameters
+    ------
+    waveforms : numpy array
+        array of cluster waveforms to plot
+    cluster_map : numpy array
+        array of indexed clusters of unique spikes
+    figsize : integer tuple
+        The figure plot size in tuple of integers, (width, height) in inches
+    sharey : boolean
+        Controls sharing of properties so only the y tick labels of the first
+        column subplot are visible
+    '''
+    num_clusters = len(cluster_map)
+    nrows = int(np.sqrt(num_clusters))
+    ncols = int(np.ceil(float(num_clusters) / nrows))
+    inverted_cluster_map = {cluster_map[k]: k for k in cluster_map}
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize, sharex=True, sharey=sharey)
+    for i, ax in enumerate(axs.reshape(-1)):
+        if i < num_clusters:
+            ax.plot(waveforms[i, :, :])
+            ax.set_title(inverted_cluster_map[i])
+    sns.despine(fig=fig, left=True, bottom=True, trim=True)
