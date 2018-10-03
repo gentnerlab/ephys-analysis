@@ -25,6 +25,7 @@ def test_rigid_pandas():
     spikes = ephys.core.load_spikes(block_path)
 
     stims = ephys.rigid_pandas.load_acute_stims(block_path)
+    assert len(stims) > 0
 
     fs = ephys.core.load_fs(block_path)
     stims['stim_duration'] = stims['stim_end'] - stims['stim_start']
