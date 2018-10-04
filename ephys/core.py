@@ -1,5 +1,6 @@
 from __future__ import absolute_import
-import sys, os
+import sys
+import os
 import glob
 import imp
 import numpy as np
@@ -170,7 +171,7 @@ def load_events(block_path, event_type):
         events = {}
         for col in kf['/event_types'][event_type]:
             if col == 'text':
-                txt = [x.decode('UTF-8') for x in kf['/event_types'][event_type][col][:]]
+                txt = [x for x in kf['/event_types'][event_type][col][:]]
                 # print([(x, x.type) for x in kf['/event_types'][event_type][col][:]])
                 events[col] = txt
             events[col] = kf['/event_types'][event_type][col][:]

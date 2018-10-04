@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from google_drive_downloader import GoogleDriveDownloader as gdd
 import pytest
 from pathlib2 import Path
