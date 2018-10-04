@@ -32,8 +32,8 @@ def test_rigid_pandas():
     ephys.rigid_pandas.timestamp2time(stims, fs, 'stim_duration')
 
     stim_ids = stims['stim_name']
-    stim_ids = stim_ids.str.replace(r'_rec', '')
-    stim_ids = stim_ids.str.replace(r'_rep\d\d', '')
+    stim_ids = stim_ids.str.replace(rb'_rec', '')
+    stim_ids = stim_ids.str.replace(rb'_rep\d\d', '')
     stims['stim_id'] = stim_ids
 
     ephys.rigid_pandas.count_events(stims, index='stim_id')
