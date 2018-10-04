@@ -70,9 +70,9 @@ def load_acute_stims(block_path):
     '''
     stims = core.load_events(block_path, 'DigMark')
     # assumes one start and one end for each trial
-    stims.loc[stims['codes'] == '<', 'stim_end'] = stims[
-        stims['codes'] == '>']['time_samples'].values
-    stims = stims[stims['codes'] == '<']
+    stims.loc[stims['codes'] == b'<', 'stim_end'] = stims[
+        stims['codes'] == b'>']['time_samples'].values
+    stims = stims[stims['codes'] == b'<']
     # on some recs there are random date entries in the stim text field at the
     # start... removing them here
     stimdat = core.load_events(block_path, 'Stimulus')
