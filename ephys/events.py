@@ -1,3 +1,8 @@
+'''
+I updated some of the string comparisons to byte, but Im not sure exactly
+which to change. Might work, if you get a unicode error or everything is
+empty that might be the reason...~MJT
+'''
 from __future__ import absolute_import
 import re
 import datetime as dt
@@ -6,6 +11,7 @@ from .core import load_events, load_fs, load_info
 
 
 class FindEnd():
+
     def __init__(self):
         self.keep = True
 
@@ -34,13 +40,13 @@ def get_stim_start(stim_end_row, digmarks):
     '''
     rec, ts = stim_end_row['recording'], stim_end_row['time_samples']
     mask = (
-            (digmarks['recording'] == rec)
-            & (digmarks['time_samples'] < ts)
-            & ~digmarks['codes'].str.contains('[RCL]')
+        (digmarks['recording'] == rec)
+        & (digmarks['time_samples'] < ts)
+        & ~digmarks['codes'].str.contains(b'[RCL]')
     )
     this_trial_mask = (
-            digmarks[mask].iloc[::-1]['codes'].apply(FindEnd().check).iloc[::-1]
-            & digmarks[mask]['codes'].str.contains('<')
+        digmarks[mask].iloc[::-1]['codes'].apply(FindEnd().check).iloc[::-1]
+        & digmarks[mask]['codes'].str.contains(b'<')
     )
     this_trial = digmarks[mask][this_trial_mask]
     return this_trial.iloc[0]
@@ -76,9 +82,9 @@ def get_stim_info(trial_row, stimulus, fs):
     '''
     rec, samps = trial_row['recording'], trial_row['time_samples']
     stim_mask = (
-            (stimulus['recording'] == rec)
-            & (stimulus['time_samples'] > (samps - 1.0 * fs))
-            & (stimulus['time_samples'] < (samps + fs))
+        (stimulus['recording'] == rec)
+        & (stimulus['time_samples'] > (samps - 1.0 * fs))
+        & (stimulus['time_samples'] < (samps + fs))
     )
 
     if stim_mask.sum() > 0:
@@ -111,10 +117,10 @@ def get_stim_end(trial_row, digmarks, fs, window=75.0):
     rec, samps = trial_row['recording'], trial_row['time_samples']
     # print((rec, samps))
     resp_mask = (
-            (digmarks['recording'] == rec)
-            & (digmarks['time_samples'] > samps)
-            & (digmarks['time_samples'] < (samps + fs * window))
-            & digmarks['codes'].str.contains('[>#]')
+        (digmarks['recording'] == rec)
+        & (digmarks['time_samples'] > samps)
+        & (digmarks['time_samples'] < (samps + fs * window))
+        & digmarks['codes'].str.contains(b'[>#]')
     )
     # print(digmarks[resp_mask].shape)
     assert digmarks[resp_mask].shape[0] > 0
@@ -148,10 +154,10 @@ def get_response(trial_row, digmarks, fs, window=5.0):
     except KeyError:
         stim_dur = get_stim_end(rec, samps, fs)['time_samples'] - samps
     resp_mask = (
-            (digmarks['recording'] == rec)
-            & (digmarks['time_samples'] > (samps + stim_dur))
-            & (digmarks['time_samples'] < (samps + stim_dur + fs * window))
-            & digmarks['codes'].str.contains('[RLN]')
+        (digmarks['recording'] == rec)
+        & (digmarks['time_samples'] > (samps + stim_dur))
+        & (digmarks['time_samples'] < (samps + stim_dur + fs * window))
+        & digmarks['codes'].str.contains(b'[RLN]')
     )
     if digmarks[resp_mask].shape[0] > 0:
         return digmarks[resp_mask].iloc[0]
@@ -184,10 +190,10 @@ def get_consequence(trial_row, digmarks, fs, window=2.0):
     rt = trial_row['response_time']
     bds = rt, rt + fs * window
     resp_mask = (
-            (digmarks['recording'] == rec)
-            & (digmarks['time_samples'] > bds[0])
-            & (digmarks['time_samples'] < bds[1])
-            & digmarks['codes'].str.contains('[FfTt]')
+        (digmarks['recording'] == rec)
+        & (digmarks['time_samples'] > bds[0])
+        & (digmarks['time_samples'] < bds[1])
+        & digmarks['codes'].str.contains(b'[FfTt]')
     )
     if digmarks[resp_mask].shape[0] > 0:
         return digmarks[resp_mask].iloc[0]
@@ -229,6 +235,7 @@ def calc_rec_datetime(file_origin, start_time):
 
 
 class FindCorrectionTrials():
+
     def __init__(self):
         self.correction = False
 
@@ -276,28 +283,31 @@ def load_trials(block_path):
     '''
     digmarks = load_events(block_path, 'DigMark')
     digmarks['codes'] = digmarks.apply(lambda row: row['codes'].decode(), axis=1)
-    digmarks = digmarks[digmarks['codes'] != 'C']
+    digmarks = digmarks[digmarks['codes'] != b'C']
     stimulus = load_events(block_path, 'Stimulus')
     stimulus['text'] = stimulus.apply(lambda row: row['text'].decode(), axis=1)
 
     stim_mask = (
-            ~(stimulus['text'].astype(str).str.contains('date'))
-            & (stimulus['text'].apply(_is_not_floatable))  # occlude floats
+        ~(stimulus['text'].astype(str).str.contains(b'date'))
+        & (stimulus['text'].apply(_is_not_floatable))  # occlude floats
     )
     stimulus = stimulus[stim_mask]
     fs = load_fs(block_path)
     info = load_info(block_path)
 
-    stim_end_mask = digmarks['codes'].isin(('>', '#'))
+    stim_end_mask = digmarks['codes'].isin((b'>', b'#'))
     trials = digmarks[stim_end_mask].apply(lambda row: get_stim_start(row, digmarks), axis=1)[:]
     trials.reset_index(inplace=True)
     del trials['index']
     del trials['codes']
     trials['stimulus'] = trials.apply(lambda row: get_stim_info(row, stimulus, fs)['text'], axis=1)
-    trials['stimulus_end'] = trials.apply(lambda row: get_stim_end(row, digmarks, fs)['time_samples'], axis=1)
+    trials['stimulus_end'] = trials.apply(
+        lambda row: get_stim_end(row, digmarks, fs)['time_samples'], axis=1)
     trials['response'] = trials.apply(lambda row: get_response(row, digmarks, fs)['codes'], axis=1)
-    trials['response_time'] = trials.apply(lambda row: get_response(row, digmarks, fs)['time_samples'], axis=1)
-    trials['consequence'] = trials.apply(lambda row: get_consequence(row, digmarks, fs)['codes'], axis=1)
+    trials['response_time'] = trials.apply(
+        lambda row: get_response(row, digmarks, fs)['time_samples'], axis=1)
+    trials['consequence'] = trials.apply(
+        lambda row: get_consequence(row, digmarks, fs)['codes'], axis=1)
     trials['correct'] = trials['consequence'].apply(is_correct)
 
     def trial_time(row):
