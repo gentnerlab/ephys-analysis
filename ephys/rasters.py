@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from six.moves import zip
 
 
-def do_raster(raster_data, times, ticks, ax=None, spike_linewidth=1.5,
+def do_raster(raster_data, times, ticks, ntrials, ax=None, spike_linewidth=1.5,
               spike_color='k', tick_linewidth=1.5, tick_color='r'):
     '''
     Generalized raster plotting function
@@ -39,24 +39,20 @@ def do_raster(raster_data, times, ticks, ax=None, spike_linewidth=1.5,
     raster_plot :
         Handle to the raster plot
     '''
-    ntrials = len(raster_data)
+    raster_data = np.array(raster_data)
     if ax is None:
         ax = plt.gca()
     ax.set_xlim(times)
-    ax.set_ylim((1, ntrials + 1))
-    for trial, trialdata in enumerate(raster_data):
-        ypts = [1 + trial, 2 + trial]
-        for spiketime in trialdata:
-            ax.plot([spiketime, spiketime], ypts, spike_color,
-                    lw=spike_linewidth)
+    ax.set_ylim((-0.5, ntrials-0.5))
+    ax.set_yticks(range(0, ntrials))
+    ax.eventplot(raster_data, linewidths=spike_linewidth, colors=spike_color)
     for pltticks in ticks:
-        ax.plot([pltticks, pltticks], [1, ntrials + 1], tick_color,
-                lw=tick_linewidth)
+        ax.axvline(pltticks, color=tick_color)
     return ax
 
 
 def plot_raster_cell_stim(spikes, trials, clusterID,
-                          stim, period, rec, fs, ax=None, **kwargs):
+                          stim, period, rec, fs, ax=None, stim_ref='stim', **kwargs):
     '''
     Plots a spike raster for a single cell and stimulus
 
@@ -93,12 +89,38 @@ def plot_raster_cell_stim(spikes, trials, clusterID,
     stim_starts = stim_trials['time_samples'].values
     stim_ends = stim_trials['stimulus_end'].values
     stim_end_seconds = np.unique((stim_ends - stim_starts) / fs)[0]
-    window = [period[0], stim_end_seconds + period[1]]
+    if stim_ref == 'stim':
+        window = [period[0], stim_end_seconds + period[1]]
+    elif stim_ref == 'abs':
+        window = [period[0], period[1]]
     raster_data = []
     for trial, start in enumerate(stim_starts):
         sptrain = get_spiketrain(rec, start, clusterID, spikes, window, fs)
         raster_data.append(sptrain)
-    do_raster(raster_data, window, [0, stim_end_seconds], ax, **kwargs)
+    ax = do_raster(raster_data, window, [0, stim_end_seconds], ntrials, ax, **kwargs)
+    return ax
+
+def plot_all_rasters(block_path):
+    ''' Plots all the rasters from all units for all stimuli 
+        Places them in a blockpath/rasters folder
+    '''
+    rasters_folder = os.path.join(block_path, 'rasters/')
+    spikes = core.load_spikes(block_path)
+    trials = core.load_trials(block_path)
+    fs = core.load_fs(block_path)
+    stims = np.unique(trials['stimulus'].values)
+
+    os.makedirs(rasters_folder, exist_ok=True)
+    for cluster in tqdm.tqdm(clusters):
+        os.makedirs(os.path.join(rasters_folder, '{}/'.format(cluster), exist_ok=True))
+        for stim in tqdm.tqdm(stims):
+            fig = plt.figure()
+            ax = plot_raster_cell_stim(spikes, trials, cluster, stim, [-2, 2], 0, fs)
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Trial Number')
+            ax.set_title('Unit: {}  Stimulus: {}'.format(cluster, stim))
+            plt.savefig(os.path.join(rasters_folder, '/{}/unit-{}_stim-{}.pdf'.format(cluster, cluster, stim)))
+            plt.close(fig)
 
 
 def plot_raster_cell_stim_emily(spikes, trials, clusterID,
