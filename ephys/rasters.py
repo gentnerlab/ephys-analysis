@@ -42,10 +42,10 @@ def do_raster(raster_data, times, ticks, ax=None, spike_linewidth=1.5,
     ax.set_xlim(times)
     ax.set_ylim((1, ntrials+1))
     for trial, trialdata in enumerate(raster_data):
-        ypts = [1+trial, 2+trial]
-        for spiketime in trialdata:
-            ax.plot([spiketime, spiketime], ypts, spike_color, 
-                    lw=spike_linewidth)
+        ypt = np.array([1+trial, 2+trial])
+        xpts = np.vstack((trialdata, trialdata))
+        ypts = np.tile(ypt.T, [1, len(trialdata)])
+        ax.plot(xpts, ypts, spike_color, lw=spike_linewidth)
     for pltticks in ticks:
         ax.plot([pltticks, pltticks], [1, ntrials+1], tick_color, 
                 lw=tick_linewidth)
