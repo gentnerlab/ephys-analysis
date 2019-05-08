@@ -11,6 +11,9 @@ matplotlib
 scikit-learn
 googledrivedownloader
 pathlib2
+
+# testing
+pytest>=3.6
 pytest-ordering
 pytest-cov
 python-coveralls

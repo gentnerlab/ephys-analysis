@@ -44,7 +44,7 @@ def do_raster(raster_data, times, ticks, ntrials, ax=None, spike_linewidth=1.5,
         ax = plt.gca()
     ax.set_xlim(times)
     ax.set_ylim((-0.5, ntrials-0.5))
-    ax.set_yticks(range(0, ntrials)h)
+    ax.set_yticks(range(0, ntrials))
     ax.eventplot(raster_data, linewidths=spike_linewidth, colors=spike_color)
     for pltticks in ticks:
         ax.axvline(pltticks, color=tick_color)
@@ -97,7 +97,30 @@ def plot_raster_cell_stim(spikes, trials, clusterID,
     for trial, start in enumerate(stim_starts):
         sptrain = get_spiketrain(rec, start, clusterID, spikes, window, fs)
         raster_data.append(sptrain)
-    do_raster(raster_data, window, [0, stim_end_seconds], ntrials, ax, **kwargs)
+    ax = do_raster(raster_data, window, [0, stim_end_seconds], ntrials, ax, **kwargs)
+    return ax
+
+def plot_all_rasters(block_path):
+    ''' Plots all the rasters from all units for all stimuli 
+        Places them in a blockpath/rasters folder
+    '''
+    rasters_folder = os.path.join(block_path, 'rasters/')
+    spikes = core.load_spikes(block_path)
+    trials = core.load_trials(block_path)
+    fs = core.load_fs(block_path)
+    stims = np.unique(trials['stimulus'].values)
+
+    os.makedirs(rasters_folder, exist_ok=True)
+    for cluster in tqdm.tqdm(clusters):
+        os.makedirs(os.path.join(rasters_folder, '{}/'.format(cluster), exist_ok=True))
+        for stim in tqdm.tqdm(stims):
+            fig = plt.figure()
+            ax = plot_raster_cell_stim(spikes, trials, cluster, stim, [-2, 2], 0, fs)
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Trial Number')
+            ax.set_title('Unit: {}  Stimulus: {}'.format(cluster, stim))
+            plt.savefig(os.path.join(rasters_folder, '/{}/unit-{}_stim-{}.pdf'.format(cluster, cluster, stim)))
+            plt.close(fig)
 
 
 def plot_raster_cell_stim_emily(spikes, trials, clusterID,
