@@ -32,7 +32,7 @@ def test_rigid_pandas():
     ephys.rigid_pandas.timestamp2time(stims, fs, 'stim_duration')
 
     stim_ids = stims['stim_name']
-    stim_ids = stim_ids.applymap(lambda x: x.decode() if isinstance(x, bytes) else x)
+    stim_ids = stim_ids.map(lambda x: x.decode() if isinstance(x, bytes) else x)
     stim_ids = stim_ids.str.replace(b'_rec', '')
     stim_ids = stim_ids.str.replace(b'_rep\d\d', '')
     stims['stim_id'] = stim_ids
